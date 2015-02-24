@@ -1,0 +1,24 @@
+#! /bin/bash
+
+SITE_HOME=/opt/www/template/app/
+VENV_HOME=/opt/www/template/app/venv/
+TARGET_ROOT=/home/sites/backup/appdb/
+MANAGER=manage.py
+
+echo "Activating virtual environment"
+source $VENV_HOME"/bin/activate"
+
+FILE=$TARGET_ROOT"template"$(date -d "today" +"%Y%m%d%H%M")".json.gz"
+
+mkdir -p $TARGET_ROOT
+
+echo "Dumping data to "$FILE
+
+export DATABASE_URL=postgres://app:pw@localhost/appdb
+
+python $SITE_HOME$MANAGER dumpdata --natural --indent=4 -e sessions -e admin -e contenttypes -e auth.Permission | gzip > $FILE
+
+deactivate
+
+echo "Synchronizing"
+s3cmd put $FILE s3://me/backup/appdb/
